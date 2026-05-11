@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <title>Entre Orbitas</title>
+  <style>
+    :root {
+      --bg: #070817;
+      --panel: rgba(10, 14, 32, 0.78);
+      --text: #f8fbff;
+      --muted: #aeb9ca;
+      --pink: #ff72bd;
+      --rose: #ffc1dc;
+      --blue: #69ddff;
+      --orange: #ffc06e;
+      --green: #7dffb2;
+      --red: #ff516d;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      touch-action: none;
+    }
+
+    .game {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background:
+        radial-gradient(circle at 20% 12%, rgba(255, 114, 189, 0.32), transparent 28%),
+        radial-gradient(circle at 82% 24%, rgba(255, 192, 110, 0.18), transparent 27%),
+        radial-gradient(circle at 50% 72%, rgba(105, 221, 255, 0.13), transparent 34%),
+        linear-gradient(180deg, #20112c 0%, #100a22 55%, #060711 100%);
+    }
+
+    header {
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: max(10px, env(safe-area-inset-top)) 12px 9px;
+      background: linear-gradient(180deg, rgba(3, 5, 14, 0.9), rgba(3, 5, 14, 0.4));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 10px 30px rgba(255, 114, 189, 0.08);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .score {
+      display: flex;
+      gap: 8px;
+      text-align: center;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .score div {
+      min-width: 58px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 114, 189, 0.07));
+    }
+
+    .score strong {
+      display: block;
+      color: white;
+      font-size: 1rem;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .message {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      z-index: 3;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-left: 3px solid var(--pink);
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(35, 13, 38, 0.82), rgba(7, 14, 31, 0.72));
+      color: #edf7ff;
+      box-shadow: 0 12px 34px rgba(255, 114, 189, 0.18);
+      line-height: 1.35;
+      font-size: 0.88rem;
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      pointer-events: none;
+    }
+
+    .message.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(11, 6, 22, 0.72), rgba(8, 6, 18, 0.91)),
+        radial-gradient(circle at 50% 20%, rgba(255, 114, 189, 0.32), transparent 30%),
+        radial-gradient(circle at 30% 74%, rgba(255, 192, 110, 0.13), transparent 26%);
+      backdrop-filter: blur(8px);
+      text-align: center;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .card {
+      width: min(100%, 430px);
+      display: grid;
+      gap: 12px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(2.3rem, 13vw, 4.6rem);
+      line-height: 0.9;
+      text-transform: uppercase;
+      text-shadow: 0 0 28px rgba(255, 105, 180, 0.36);
+      color: #fff4fb;
+    }
+
+    p {
+      margin: 0;
+      color: #c7d2e2;
+      line-height: 1.5;
+    }
+
+    button {
+      min-height: 48px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      color: white;
+      background: linear-gradient(135deg, rgba(84, 215, 255, 0.34), rgba(255, 105, 180, 0.34));
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 34px rgba(255, 114, 189, 0.2);
+    }
+
+    footer {
+      z-index: 2;
+      display: grid;
+      gap: 7px;
+      padding: 8px 12px max(10px, env(safe-area-inset-bottom));
+      background: linear-gradient(0deg, rgba(3, 5, 14, 0.94), rgba(3, 5, 14, 0.46));
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-align: center;
+    }
+
+    .bar {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .mini {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--pink));
+      box-shadow: 0 0 16px rgba(255, 114, 189, 0.32);
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <header>
+      <div>
+        <h1>Entre Orbitas</h1>
+        <div class="subtitle">Arraste a nave. Ela atira sozinha.</div>
+      </div>
+      <div class="score">
+        <div><strong id="points">0</strong>pts</div>
+        <div><strong id="lives">3</strong>vidas</div>
+      </div>
+    </header>
+
+    <section class="stage" id="stage">
+      <canvas id="canvas"></canvas>
+      <div class="message" id="message"></div>
+
+      <div class="overlay" id="start">
+        <div class="card">
+          <h2 class="title">Entre<br>Orbitas</h2>
+          <p>Uma navezinha, umas orbitas rosas, piadas bestas e aquela vontade discreta de chegar bem so pra contar depois.</p>
+          <button id="startBtn">Comecar</button>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="end">
+        <div class="card">
+          <h2 class="title">Fim da<br>Patrulha</h2>
+          <p id="endText"></p>
+          <button id="againBtn">Jogar de novo</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="mini">
+        <div class="bar"><div class="fill" id="charge"></div></div>
+        <span id="modeText">patrulha</span>
+      </div>
+      <div>Celular: arraste na tela. Computador: mouse ou setas.</div>
+    </footer>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const stage = document.getElementById("stage");
+    const startOverlay = document.getElementById("start");
+    const endOverlay = document.getElementById("end");
+    const pointsEl = document.getElementById("points");
+    const livesEl = document.getElementById("lives");
+    const chargeEl = document.getElementById("charge");
+    const modeText = document.getElementById("modeText");
+    const msgEl = document.getElementById("message");
+    const endText = document.getElementById("endText");
+
+    const state = {
+      running: false,
+      w: 0,
+      h: 0,
+      dpr: 1,
+      points: 0,
+      lives: 3,
+      time: 0,
+      last: 0,
+      spawn: 0,
+      shoot: 0,
+      power: 0,
+      shield: 0,
+      combo: 0,
+      comboTime: 0,
+      message: 0,
+      player: { x: 0, y: 0, targetX: 0, targetY: 0 },
+      bullets: [],
+      enemies: [],
+      pickups: [],
+      particles: [],
+      stars: [],
+      hearts: [],
+      keys: {},
+      audio: null,
+    };
+
+    const lines = [
+      "Fundacao do RAC Aracoiaba: networking, risada e uma rota que ficou suspeitamente importante.",
+      "RAC Votura na escuta. Poucas semanas e o radar ja reconhece saudade.",
+      "Ela: 'isso passou por licitacao?' Voce: 'pior, passou por teste de campo.'",
+      "Drone reprovado no QA de maquina agricola. Abriu chamado e caiu do ceu.",
+      "Modo danca ativado: se errar o passo, finge que era coreografia.",
+      "Frio detectado. Jaqueta jeans nao concede resistencia termica.",
+      "Domingo esta demorando mais que download em internet de evento.",
+      "Uma horinha e chega. O GPS do coracao recalculou a rota.",
+      "Documento suspeito no radar. Analise tecnica: melhor deixar pra depois.",
+      "00:00 eu te conto. Ate la, sobreviva.",
+      "Spotted espacial: alguem esta claramente pilotando com segundas intencoes.",
+      "Aula de assobio pendente. Prioridade: baixa. Motivo: obvio.",
+      "Show de talentos no setor. A nave esta travada, mas tentando acompanhar.",
+      "Olhar alinhado em 1,68m. Perigo operacional.",
+      "Modo fala-depois-pensa desbloqueado. Honestamente, funciona.",
+      "Companheirismo demais no radar. Separando alvo por motivos logisticos.",
+      "Mensagem recebida: 'chegou bem?' Pequeno cuidado, dano emocional critico.",
+      "Nebulosa rosa no horizonte. A nave finge que nao ficou boba.",
+      "Silencio confortavel detectado. Nenhum alarme, so vontade de ficar.",
+    ];
+
+    const enemyTypes = [
+      { kind: "edital", label: "EDITAL", color: "#ffb35c", hp: 5, points: 28 },
+      { kind: "bug", label: "BUG", color: "#ff516d", hp: 2, points: 10 },
+      { kind: "relatorio", label: "RELATORIO", color: "#9f8cff", hp: 3, points: 14 },
+      { kind: "frio", label: "FRIO", color: "#54d7ff", hp: 2, points: 12 },
+      { kind: "spotted", label: "SPOTTED", color: "#ff69b4", hp: 4, points: 22 },
+    ];
+
+    const pickupTypes = {
+      cafe: { label: "CAFE", color: "#ffb35c" },
+      jaqueta: { label: "JAQUETA", color: "#54d7ff" },
+      assobio: { label: "ASSOBIO", color: "#7dffb2" },
+      meiaNoite: { label: "00:00", color: "#ff69b4" },
+    };
+
+    function clamp(v, a, b) {
+      return Math.max(a, Math.min(b, v));
+    }
+
+    function rnd(a, b) {
+      return Math.random() * (b - a) + a;
+    }
+
+    function resize() {
+      state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      state.w = stage.clientWidth;
+      state.h = stage.clientHeight;
+      canvas.width = Math.floor(state.w * state.dpr);
+      canvas.height = Math.floor(state.h * state.dpr);
+      ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      state.player.x = state.player.targetX = state.w / 2;
+      state.player.y = state.player.targetY = state.h - 70;
+      state.stars = Array.from({ length: 90 }, () => ({
+        x: rnd(0, state.w),
+        y: rnd(0, state.h),
+        s: rnd(0.6, 2.2),
+        v: rnd(20, 80),
+        c: Math.random() > 0.86 ? "#ff69b4" : "#ffffff",
+      }));
+      state.hearts = Array.from({ length: 18 }, () => ({
+        x: rnd(0, state.w),
+        y: rnd(0, state.h),
+        s: rnd(7, 16),
+        v: rnd(10, 34),
+        a: rnd(0.12, 0.34),
+      }));
+    }
+
+    function initAudio() {
+      if (state.audio) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ac = new AudioContext();
+      const master = ac.createGain();
+      master.gain.value = 0.045;
+      master.connect(ac.destination);
+      state.audio = { ac, master, next: 0, step: 0 };
+    }
+
+    function tone(freq, dur, type = "sine", gain = 0.04) {
+      if (!state.audio) return;
+      const { ac, master } = state.audio;
+      const osc = ac.createOscillator();
+      const g = ac.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(gain, ac.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      osc.connect(g);
+      g.connect(master);
+      osc.start();
+      osc.stop(ac.currentTime + dur + 0.03);
+    }
+
+    function music() {
+      if (!state.audio) return;
+      const { ac } = state.audio;
+      if (ac.currentTime > state.audio.next) {
+        const notes = [196, 247, 294, 330, 247, 220];
+        const n = notes[state.audio.step % notes.length];
+        tone(n, 0.18, "triangle", 0.012);
+        if (state.audio.step % 4 === 0) tone(n / 2, 0.3, "sine", 0.014);
+        state.audio.step++;
+        state.audio.next = ac.currentTime + 0.36;
+      }
+    }
+
+    function showMessage(text) {
+      msgEl.textContent = text;
+      msgEl.classList.add("show");
+      clearTimeout(showMessage.timer);
+      showMessage.timer = setTimeout(() => msgEl.classList.remove("show"), 3300);
+    }
+
+    function shoot() {
+      state.bullets.push({ x: state.player.x, y: state.player.y - 22, vx: 0, vy: -560, r: 4, color: "#54d7ff" });
+      if (state.power > 0) {
+        state.bullets.push({ x: state.player.x - 13, y: state.player.y - 14, vx: -70, vy: -520, r: 3.5, color: "#ff69b4" });
+        state.bullets.push({ x: state.player.x + 13, y: state.player.y - 14, vx: 70, vy: -520, r: 3.5, color: "#ff69b4" });
+        state.bullets.push({ x: state.player.x - 23, y: state.player.y - 6, vx: -150, vy: -455, r: 3, color: "#7dffb2" });
+        state.bullets.push({ x: state.player.x + 23, y: state.player.y - 6, vx: 150, vy: -455, r: 3, color: "#7dffb2" });
+      }
+      tone(520, 0.04, "square", 0.012);
+    }
+
+    function spawnEnemy() {
+      const big = state.time > 35 && Math.random() < 0.14;
+      const type = big ? enemyTypes[0] : enemyTypes[Math.floor(rnd(1, enemyTypes.length))];
+      state.enemies.push({
+        x: rnd(24, state.w - 24),
+        y: -30,
+        vx: rnd(-28, 28),
+        vy: big ? rnd(72, 96) : rnd(110, 170) + state.time * 1.1,
+        r: big ? 25 : rnd(14, 20),
+        hp: type.hp + (big ? 2 : 0),
+        points: type.points + (big ? 10 : 0),
+        label: type.label,
+        color: type.color,
+        spin: rnd(0, 8),
+        kind: type.kind,
+      });
+    }
+
+    function spawnPickup(x, y) {
+      const keys = Object.keys(pickupTypes);
+      const type = keys[Math.floor(rnd(0, keys.length))];
+      state.pickups.push({ x, y, type, vy: 95, r: 15, spin: 0 });
+    }
+
+    function burst(x, y, color, count = 12) {
+      for (let i = 0; i < count; i++) {
+        const a = rnd(0, Math.PI * 2);
+        state.particles.push({
+          x, y,
+          vx: Math.cos(a) * rnd(30, 150),
+          vy: Math.sin(a) * rnd(30, 150),
+          life: rnd(0.25, 0.7),
+          max: 0.7,
+          color,
+        });
+      }
+    }
+
+    function drawHeart(x, y, size, color, alpha = 1) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(x, y);
+      ctx.scale(size / 20, size / 20);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(0, 7);
+      ctx.bezierCurveTo(-15, -4, -8, -15, 0, -7);
+      ctx.bezierCurveTo(8, -15, 15, -4, 0, 7);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function hitPlayer(enemy) {
+      if (state.shield > 0) {
+        state.shield = Math.max(0, state.shield - 1);
+        burst(enemy.x, enemy.y, "#54d7ff", 16);
+        showMessage("Jaqueta salvou. Ela provavelmente diria: 'eu avisei do frio', tentando esconder o cuidado.");
+        return;
+      }
+      state.lives--;
+      livesEl.textContent = state.lives;
+      burst(state.player.x, state.player.y, "#ffffff", 18);
+      tone(120, 0.15, "sawtooth", 0.03);
+      if (state.lives <= 0) endGame();
+      else showMessage("Ela: 'ta tudo bem?' ... 'pergunta tecnica, obviamente.'");
+    }
+
+    function update(dt) {
+      if (!state.running) return;
+      state.time += dt;
+      state.spawn -= dt;
+      state.shoot -= dt;
+      state.message -= dt;
+      state.power = Math.max(0, state.power - dt);
+      state.comboTime -= dt;
+      if (state.comboTime <= 0) state.combo = 0;
+
+      const speed = 360;
+      let kx = 0;
+      let ky = 0;
+      if (state.keys.ArrowLeft || state.keys.a) kx--;
+      if (state.keys.ArrowRight || state.keys.d) kx++;
+      if (state.keys.ArrowUp || state.keys.w) ky--;
+      if (state.keys.ArrowDown || state.keys.s) ky++;
+      state.player.targetX += kx * speed * dt;
+      state.player.targetY += ky * speed * dt;
+      state.player.targetX = clamp(state.player.targetX, 22, state.w - 22);
+      state.player.targetY = clamp(state.player.targetY, state.h * 0.45, state.h - 34);
+      state.player.x += (state.player.targetX - state.player.x) * Math.min(1, dt * 16);
+      state.player.y += (state.player.targetY - state.player.y) * Math.min(1, dt * 16);
+
+      if (state.shoot <= 0) {
+        shoot();
+        state.shoot = state.power > 0 ? 0.11 : 0.18;
+      }
+
+      if (state.spawn <= 0) {
+        spawnEnemy();
+        state.spawn = clamp(0.84 - state.time * 0.006, 0.32, 0.84);
+      }
+
+      if (state.message <= 0) {
+        showMessage(lines[Math.floor(rnd(0, lines.length))]);
+        state.message = rnd(7, 12);
+      }
+
+      state.bullets.forEach(b => {
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+      });
+
+      state.enemies.forEach(e => {
+        e.spin += dt * 2;
+        e.x += e.vx * dt + Math.sin(e.spin * 2) * 18 * dt;
+        e.y += e.vy * dt;
+        if (Math.hypot(e.x - state.player.x, e.y - state.player.y) < e.r + 15) {
+          e.hp = 0;
+          hitPlayer(e);
+        }
+      });
+
+      state.pickups.forEach(p => {
+        p.y += p.vy * dt;
+        p.spin += dt * 4;
+        if (Math.hypot(p.x - state.player.x, p.y - state.player.y) < p.r + 18) {
+          p.y = state.h + 999;
+          collectPickup(p.type);
+        }
+      });
+
+      state.bullets.forEach(b => {
+        state.enemies.forEach(e => {
+          if (e.hp > 0 && Math.hypot(e.x - b.x, e.y - b.y) < e.r + b.r) {
+            e.hp--;
+            b.y = -999;
+            burst(b.x, b.y, b.color, 3);
+          }
+        });
+      });
+
+      state.enemies = state.enemies.filter(e => {
+        if (e.hp <= 0) {
+          state.combo++;
+          state.comboTime = 1.7;
+          state.points += e.points + Math.min(20, state.combo);
+          pointsEl.textContent = state.points;
+          if (Math.random() < 0.11) spawnPickup(e.x, e.y);
+          if (state.combo === 8) showMessage("Combo 8x. A nave travada esta oficialmente pegando ritmo.");
+          burst(e.x, e.y, e.color, e.kind === "edital" ? 22 : 12);
+          tone(e.kind === "edital" ? 170 : 260, 0.08, "triangle", 0.02);
+          return false;
+        }
+        if (e.y > state.h + 40) {
+          state.points = Math.max(0, state.points - 2);
+          pointsEl.textContent = state.points;
+          return false;
+        }
+        return true;
+      });
+
+      state.bullets = state.bullets.filter(b => b.y > -40);
+      state.pickups = state.pickups.filter(p => p.y < state.h + 60);
+      state.particles.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+      });
+      state.particles = state.particles.filter(p => p.life > 0);
+      chargeEl.style.width = `${state.power > 0 ? 100 : state.shield > 0 ? 45 : 0}%`;
+      modeText.textContent = state.power > 0 ? "modo danca" : state.shield > 0 ? `jaqueta x${state.shield}` : state.combo > 2 ? `combo ${state.combo}x` : "patrulha";
+    }
+
+    function collectPickup(type) {
+      const p = pickupTypes[type];
+      burst(state.player.x, state.player.y, p.color, 18);
+      tone(type === "meiaNoite" ? 660 : 420, 0.12, "triangle", 0.025);
+      if (type === "cafe") {
+        state.power = 8;
+        showMessage("Cafe coletado. Dois copos na bancada, como quem nao quer dizer nada.");
+      }
+      if (type === "jaqueta") {
+        state.shield = Math.min(3, state.shield + 1);
+        showMessage("Jaqueta coletada. Dessa vez nao e jeans. Pequenos milagres existem.");
+      }
+      if (type === "assobio") {
+        showMessage("Assobio perfeito. Os inimigos ficaram constrangidos e sairam.");
+        state.enemies.forEach(e => {
+          state.points += 5;
+          burst(e.x, e.y, "#7dffb2", 8);
+        });
+        state.enemies = [];
+        pointsEl.textContent = state.points;
+      }
+      if (type === "meiaNoite") {
+        state.points += 75;
+        state.power = 5;
+        pointsEl.textContent = state.points;
+        showMessage("00:00: segredo contado baixinho. Bonus aplicado no coracao do sistema.");
+      }
+    }
+
+    function drawShip(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+      const flame = ctx.createLinearGradient(0, 14, 0, 42);
+      flame.addColorStop(0, "rgba(255,193,220,0.75)");
+      flame.addColorStop(1, "rgba(255,114,189,0)");
+      ctx.fillStyle = flame;
+      ctx.beginPath();
+      ctx.ellipse(0, 27, 13, 28, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowColor = "#ff72bd";
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "#69ddff";
+      ctx.beginPath();
+      ctx.moveTo(0, -25);
+      ctx.lineTo(18, 18);
+      ctx.lineTo(0, 10);
+      ctx.lineTo(-18, 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#fff4fb";
+      ctx.beginPath();
+      ctx.roundRect(-5, -9, 10, 13, 4);
+      ctx.fill();
+      ctx.fillStyle = "#ff72bd";
+      ctx.fillRect(-12, 18, 6, 10);
+      ctx.fillRect(6, 18, 6, 10);
+      drawHeart(0, 2, 8, "#ff72bd", 0.9);
+      ctx.restore();
+    }
+
+    function drawEnemy(e) {
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.rotate(e.spin);
+      ctx.shadowColor = e.color;
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = e.color;
+      if (e.kind === "bug") {
+        ctx.fillRect(-e.r, -e.r, e.r * 2, e.r * 2);
+      } else {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = i * Math.PI / 3;
+          const r = i % 2 ? e.r * 0.6 : e.r;
+          ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.save();
+      ctx.font = "700 9px monospace";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,255,255,0.76)";
+      ctx.fillText(e.label, e.x, e.y + e.r + 13);
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, state.w, state.h);
+      const grad = ctx.createLinearGradient(0, 0, 0, state.h);
+      grad.addColorStop(0, "#241230");
+      grad.addColorStop(0.55, "#101334");
+      grad.addColorStop(1, "#05060d");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, state.w, state.h);
+
+      state.stars.forEach(s => {
+        s.y += s.v * 0.016;
+        if (s.y > state.h) {
+          s.y = 0;
+          s.x = rnd(0, state.w);
+        }
+        ctx.globalAlpha = s.s / 2.2;
+        ctx.fillStyle = s.c;
+        ctx.fillRect(s.x, s.y, s.s, s.s);
+      });
+      ctx.globalAlpha = 1;
+
+      state.hearts.forEach(h => {
+        h.y += h.v * 0.016;
+        h.x += Math.sin((h.y + state.time * 40) * 0.015) * 0.25;
+        if (h.y > state.h + 20) {
+          h.y = -20;
+          h.x = rnd(0, state.w);
+        }
+        drawHeart(h.x, h.y, h.s, "#ffc1dc", h.a);
+      });
+
+      const nebula = ctx.createRadialGradient(state.w * 0.5, state.h * 0.25, 20, state.w * 0.5, state.h * 0.25, state.w * 0.48);
+      nebula.addColorStop(0, "rgba(255, 193, 220, 0.18)");
+      nebula.addColorStop(0.55, "rgba(255, 105, 180, 0.08)");
+      nebula.addColorStop(1, "rgba(255, 105, 180, 0)");
+      ctx.fillStyle = nebula;
+      ctx.beginPath();
+      ctx.ellipse(state.w * 0.5, state.h * 0.25, state.w * 0.42, 55, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255, 193, 220, 0.12)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(state.w * (0.22 + i * 0.25), state.h * (0.22 + i * 0.08), 52 + i * 18, 0.15, Math.PI * 1.35);
+        ctx.stroke();
+      }
+
+      state.bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.shadowBlur = 0;
+
+      state.enemies.forEach(drawEnemy);
+
+      state.pickups.forEach(p => {
+        const info = pickupTypes[p.type];
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.spin);
+        ctx.shadowColor = info.color;
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = info.color;
+        ctx.beginPath();
+        ctx.roundRect(-13, -13, 26, 26, 6);
+        ctx.fill();
+        ctx.restore();
+        ctx.font = "700 10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(info.label, p.x, p.y + 26);
+      });
+
+      state.particles.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life / p.max);
+        ctx.fillStyle = p.color;
+        if (Math.random() > 0.86) drawHeart(p.x, p.y, 7, p.color, Math.max(0, p.life / p.max));
+        else ctx.fillRect(p.x, p.y, 3, 3);
+      });
+      ctx.globalAlpha = 1;
+
+      drawShip(state.player.x, state.player.y);
+    }
+
+    function loop(now) {
+      const dt = Math.min((now - state.last) / 1000 || 0, 0.033);
+      state.last = now;
+      music();
+      update(dt);
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    function startGame() {
+      initAudio();
+      state.running = true;
+      state.points = 0;
+      state.lives = 3;
+      state.time = 0;
+      state.spawn = 0;
+      state.shoot = 0;
+      state.power = 0;
+      state.shield = 0;
+      state.combo = 0;
+      state.comboTime = 0;
+      state.message = 1.2;
+      state.bullets = [];
+      state.enemies = [];
+      state.pickups = [];
+      state.particles = [];
+      pointsEl.textContent = "0";
+      livesEl.textContent = "3";
+      endOverlay.classList.add("hidden");
+      startOverlay.classList.add("hidden");
+      showMessage("Primeira patrulha oficial depois de poucas semanas conversando. Tranquilo. Super normal.");
+    }
+
+    function endGame() {
+      state.running = false;
+      endText.textContent = `Voce fez ${state.points} pontos. Relatorio final: nave quase inteira, saudade em orbita e uma desculpa perfeita pra mandar o link pra ela.`;
+      endOverlay.classList.remove("hidden");
+    }
+
+    function setTarget(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      state.player.targetX = clamp(clientX - rect.left, 22, state.w - 22);
+      state.player.targetY = clamp(clientY - rect.top, state.h * 0.45, state.h - 34);
+    }
+
+    canvas.addEventListener("pointerdown", e => {
+      initAudio();
+      canvas.setPointerCapture(e.pointerId);
+      setTarget(e.clientX, e.clientY);
+    });
+    canvas.addEventListener("pointermove", e => setTarget(e.clientX, e.clientY));
+    window.addEventListener("keydown", e => state.keys[e.key] = true);
+    window.addEventListener("keyup", e => state.keys[e.key] = false);
+    window.addEventListener("resize", resize);
+    document.getElementById("startBtn").addEventListener("click", startGame);
+    document.getElementById("againBtn").addEventListener("click", startGame);
+
+    resize();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
